@@ -1,3 +1,7 @@
+mod hash;
 mod models;
 
-fn main() {}
+#[compio::main]
+async fn main() {
+    let (hash, value) = hash::hash_file().await.unwrap();
+}
