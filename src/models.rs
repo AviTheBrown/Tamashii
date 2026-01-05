@@ -1,24 +1,32 @@
 use std::hash::Hash;
 
-pub struct FilePath(String);
-impl Hash for FilePath {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
+#[derive(Debug)]
+pub struct HashedFileInfo {
+    pub file_name: String,
+    pub hashed_content: HexStirng,
+}
+impl HashedFileInfo {
+    pub fn new(file_name: String, hashed_content: HexStirng) -> Self {
+        return Self {
+            file_name,
+            hashed_content,
+        };
     }
 }
 
-pub struct HashString(pub String);
-impl Hash for HashString {
+#[derive(Debug)]
+pub struct HexStirng(pub String);
+impl Hash for HexStirng {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }
 }
-impl PartialEq for HashString {
+impl PartialEq for HexStirng {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
 }
-struct FIleRecord {
+struct FileRecord {
     path: std::path::PathBuf,
     hash: String,
     size: u8,
