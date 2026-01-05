@@ -14,10 +14,10 @@ async fn main() {
     let file = files::get_file(file_path)
         .await
         .expect("Failed to open file");
-    let meta = files::get_meta(&file)
+    let meta = files::get_meta(&file, &file_path)
         .await
         .expect("Failed to retreive file metadata.");
-    let hashed_content = hash::hash_file(&file).await.unwrap();
+    let hashed_content = hash::hash_file(&file, &file_path).await.unwrap();
 
     // args.remove(1)
     let file_hash_stuff = models::HashedFileInfo::new(args[1].clone(), hashed_content);
