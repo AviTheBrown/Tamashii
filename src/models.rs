@@ -1,3 +1,6 @@
+use chrono::{DateTime, Local};
+
+use crate::pub_struct;
 use std::hash::Hash;
 
 #[derive(Debug)]
@@ -26,9 +29,33 @@ impl PartialEq for HexStirng {
         self.0 == other.0
     }
 }
-struct FileRecord {
-    path: std::path::PathBuf,
-    hash: String,
-    size: u8,
-    time_stamp: std::time::SystemTime,
+impl std::fmt::Display for HexStirng {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+pub_struct! {
+    #[derive(Debug)]
+    pub struct FileRecord {
+        path: std::path::PathBuf,
+        hash: HexStirng,
+        size: u8,
+        time_stamp: std::time::SystemTime,
+    }
+}
+
+impl std::fmt::Display for FileRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let datetime: DateTime<Local> = self.time_stamp.into();
+        let formatted_time = datetime.format("%Y-%m-%d %H:%M:%S");
+        write!(
+            f,
+            "File name: {}\nHash: {}\nSize: {} bytes\nCreated: {}",
+            self.path.display(),
+            self.hash,
+            self.size,
+            formatted_time
+        )
+    }
 }
