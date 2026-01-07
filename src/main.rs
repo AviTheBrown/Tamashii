@@ -1,10 +1,14 @@
+mod database;
 mod errors;
 mod files;
 mod hash;
 mod macros;
 mod models;
-use models::FileRecord;
-use std::path::Path;
+use chrono::{DateTime, TimeZone, Utc};
+use models::{Database, FileRecord};
+use std::path::{Path, PathBuf};
+
+use crate::models::HexStirng;
 
 #[compio::main]
 async fn main() {
@@ -19,7 +23,6 @@ async fn main() {
         .expect("Failed to retreive file metadata.");
     let hashed_content = hash::hash_file(&file, &file_path).await.unwrap();
 
-    // args.remove(1)
     let file_hash_stuff = models::HashedFileInfo::new(args[1].clone(), hashed_content);
     let record = FileRecord {
         path: file_path.to_path_buf(),
@@ -28,4 +31,23 @@ async fn main() {
         time_stamp: meta.created().expect("Failed to get creation time"),
     };
     println!("{}", record);
+    let test_db = Database {
+        version: "1.0.0-test".into(),
+        root_dir: PathBuf::from("/tmp/test_db"),
+        created_at: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
+        updated_at: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
+        files: vec![FileRecord {
+            path: PathBuf::from("example.txt"),
+            hash: HexStirng("deadbeef".to_string()),
+            size: 42,
+            time_stamp: std::time::SystemTime::now(),
+        }],
+    };
+    match database::write_database_file(&test_db).await {
+        Ok(db) => {
+            println!("sucess")
+        }
+        Err(err) => eprintln!("failed"),
+    }
+    database::parse_database_file(json_file);
 }
