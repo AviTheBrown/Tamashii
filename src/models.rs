@@ -1,7 +1,8 @@
-use chrono::{DateTime, Local};
-
 use crate::pub_struct;
+use chrono::{DateTime, Local, Utc};
+use serde::{Deserialize, Serialize};
 use std::hash::Hash;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct HashedFileInfo {
@@ -17,7 +18,7 @@ impl HashedFileInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HexStirng(pub String);
 impl Hash for HexStirng {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -36,7 +37,7 @@ impl std::fmt::Display for HexStirng {
 }
 
 pub_struct! {
-    #[derive(Debug)]
+    #[derive(Debug, Serialize, Deserialize)]
     pub struct FileRecord {
         path: std::path::PathBuf,
         hash: HexStirng,
@@ -58,4 +59,14 @@ impl std::fmt::Display for FileRecord {
             formatted_time
         )
     }
+}
+pub_struct! {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Database {
+    version: String,
+    root_dir: PathBuf,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    files: Vec<FileRecord>,
+}
 }
