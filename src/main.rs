@@ -4,11 +4,11 @@ mod files;
 mod hash;
 mod macros;
 mod models;
-use chrono::{DateTime, TimeZone, Utc};
+use exn::ResultExt;
 use models::{Database, FileRecord};
 use std::path::{Path, PathBuf};
 
-use crate::models::HexStirng;
+use crate::database::DB_PATH;
 
 #[compio::main]
 async fn main() {
@@ -31,23 +31,29 @@ async fn main() {
         time_stamp: meta.created().expect("Failed to get creation time"),
     };
     println!("{}", record);
-    let test_db = Database {
-        version: "1.0.0-test".into(),
-        root_dir: PathBuf::from("/tmp/test_db"),
-        created_at: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
-        updated_at: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
-        files: vec![FileRecord {
-            path: PathBuf::from("example.txt"),
-            hash: HexStirng("deadbeef".to_string()),
-            size: 42,
-            time_stamp: std::time::SystemTime::now(),
-        }],
-    };
+    let test_db = Database::new();
     match database::write_database_file(&test_db).await {
-        Ok(db) => {
-            println!("sucess")
+        Ok(_) => {
+            println!("Successfuly wrote to databas")
         }
-        Err(err) => eprintln!("failed"),
+        Err(_) => eprintln!("Failed to write to database"),
     }
-    database::parse_database_file(json_file);
+    match database::parse_database_file(&PathBuf::from(DB_PATH)).await {
+        Ok(parsed_db) => {
+            println!("✅ The Database was successfully parsed.");
+            println!("   Version: {}", parsed_db.version);
+            println!("   Root dir: {:?}", parsed_db.root_dir);
+            println!("   Files tracked: {}", parsed_db.files.len());
+
+            for file in &parsed_db.files {
+                println!("{:?} ({})", file.path, file.hash);
+            }
+        }
+        Err(err) => {
+            eprintln!(
+                "There was a problem trying to parse the database file: {}",
+                err
+            )
+        }
+    }
 }
