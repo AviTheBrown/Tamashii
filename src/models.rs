@@ -1,5 +1,5 @@
 use crate::pub_struct;
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use std::path::PathBuf;
@@ -69,4 +69,21 @@ pub struct Database {
     updated_at: DateTime<Utc>,
     files: Vec<FileRecord>,
 }
+}
+
+impl Database {
+    pub fn new() -> Self {
+        Self {
+            version: "1.0.0".to_string(),
+            root_dir: PathBuf::from("/tmpl/test_db"),
+            created_at: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
+            updated_at: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
+            files: vec![FileRecord {
+                path: PathBuf::from("example.txt"),
+                hash: HexStirng("deadbeef".to_string()),
+                size: 42,
+                time_stamp: std::time::SystemTime::now(),
+            }],
+        }
+    }
 }
