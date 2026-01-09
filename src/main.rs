@@ -4,14 +4,14 @@ mod files;
 mod hash;
 mod macros;
 mod models;
-use exn::ResultExt;
+use exn::Exn;
 use models::{Database, FileRecord};
 use std::path::{Path, PathBuf};
 
-use crate::database::DB_PATH;
+use crate::{database::DB_PATH, errors::InitError};
 
 #[compio::main]
-async fn main() {
+async fn main() -> Result<(), Exn<InitError>> {
     let args: Vec<String> = std::env::args().collect();
     let file_path = Path::new(&args[1]);
 
@@ -31,7 +31,11 @@ async fn main() {
         time_stamp: meta.created().expect("Failed to get creation time"),
     };
     println!("{}", record);
-    let test_db = Database::new();
+    let Ok(test_db) = Database::new() else {
+        return Err(Exn::new(InitError {
+            message: format!("Database::new() failed with error "),
+        }));
+    };
     match database::write_database_file(&test_db).await {
         Ok(_) => {
             println!("Successfuly wrote to databas")
@@ -40,7 +44,7 @@ async fn main() {
     }
     match database::parse_database_file(&PathBuf::from(DB_PATH)).await {
         Ok(parsed_db) => {
-            println!("✅ The Database was successfully parsed.");
+            println!("   The Database was successfully parsed.");
             println!("   Version: {}", parsed_db.version);
             println!("   Root dir: {:?}", parsed_db.root_dir);
             println!("   Files tracked: {}", parsed_db.files.len());
@@ -48,12 +52,15 @@ async fn main() {
             for file in &parsed_db.files {
                 println!("{:?} ({})", file.path, file.hash);
             }
+            return Ok(());
         }
         Err(err) => {
-            eprintln!(
-                "There was a problem trying to parse the database file: {}",
-                err
-            )
+            // let init_error = Exn::new(InitError {
+            //     message: format!("There was an error parsing the database file: {}", err),
+            // });
+            Err(Exn::new(InitError {
+                message: format!("There was an error parsing the database file: {}", err),
+            }))
         }
     }
 }
