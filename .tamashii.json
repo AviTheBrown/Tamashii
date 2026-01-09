@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "root_dir": "/tmpl/test_db",
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-01T00:00:00Z",
+  "files": [
+    {
+      "path": "example.txt",
+      "hash": "deadbeef",
+      "size": 42,
+      "time_stamp": {
+        "secs_since_epoch": 1767906026,
+        "nanos_since_epoch": 783680000
+      }
+    }
+  ]
+}
