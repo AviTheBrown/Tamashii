@@ -37,9 +37,31 @@ impl<T: AllowedIO + std::fmt::Debug> std::error::Error for IoError<T> {}
 
 // visual space for distingstion
 
-pub enum HashError {
-    ComputationFailed,
-    InvalidFormat,
+#[derive(Debug)]
+pub struct InitError {
+    pub message: String,
+}
+impl std::error::Error for InitError {}
+impl fmt::Display for InitError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Initalization Error: {}", self.message)
+    }
+}
+
+#[derive(Debug)]
+pub struct HashError {
+    pub message: HashErrorMessage,
+}
+impl std::error::Error for HashError {}
+impl fmt::Display for HashError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Hashing Error: {:?}", self.message)
+    }
+}
+#[derive(Debug)]
+pub enum HashErrorMessage {
+    ComputationFailed(String),
+    InvalidFormat(String),
 }
 
 pub enum VerificationError {
