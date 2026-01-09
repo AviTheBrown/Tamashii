@@ -1,8 +1,11 @@
+use crate::errors::DatabaseError;
 use crate::pub_struct;
 use chrono::{DateTime, Local, TimeZone, Utc};
+use exn::Exn;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use std::path::PathBuf;
+const VERSION: &str = "1.0.0";
 
 #[derive(Debug)]
 pub struct HashedFileInfo {
@@ -65,25 +68,25 @@ pub_struct! {
 pub struct Database {
     version: String,
     root_dir: PathBuf,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
+    created_at: std::time::SystemTime,
+    updated_at: std::time::SystemTime,
     files: Vec<FileRecord>,
 }
 }
 
 impl Database {
-    pub fn new() -> Self {
-        Self {
-            version: "1.0.0".to_string(),
-            root_dir: PathBuf::from("/tmpl/test_db"),
-            created_at: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
-            updated_at: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
-            files: vec![FileRecord {
-                path: PathBuf::from("example.txt"),
-                hash: HexStirng("deadbeef".to_string()),
-                size: 42,
-                time_stamp: std::time::SystemTime::now(),
-            }],
-        }
+    pub fn new() -> Result<Self, Exn<DatabaseError>> {
+        let current_dir = std::env::current_dir().map_err(|err| {
+            Exn::new(DatabaseError {
+                message: format!("Failed to get current directory: {}", err),
+            })
+        })?;
+        Ok(Self {
+            version: VERSION.to_string(),
+            root_dir: PathBuf::from(current_dir),
+            created_at: std::time::SystemTime::now(),
+            updated_at: std::time::SystemTime::now(),
+            files: vec![],
+        })
     }
 }
