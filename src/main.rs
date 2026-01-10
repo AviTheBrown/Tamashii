@@ -15,12 +15,15 @@ async fn main() -> Result<(), Exn<InitError>> {
     let args: Vec<String> = std::env::args().collect();
     let file_path = Path::new(&args[1]);
 
+    //TODO turn into exn error
     let file = files::get_file(file_path)
         .await
         .expect("Failed to open file");
+    //TODO turn into exn error
     let meta = files::get_meta(&file, &file_path)
         .await
         .expect("Failed to retreive file metadata.");
+    //TODO turn into exn error
     let hashed_content = hash::hash_file(&file, &file_path).await.unwrap();
 
     let file_hash_stuff = models::HashedFileInfo::new(args[1].clone(), hashed_content);
@@ -30,7 +33,7 @@ async fn main() -> Result<(), Exn<InitError>> {
         size: (meta.len() as u8),
         time_stamp: meta.created().expect("Failed to get creation time"),
     };
-    println!("{}", record);
+
     let Ok(test_db) = Database::new() else {
         return Err(Exn::new(InitError {
             message: format!("Database::new() failed with error "),
