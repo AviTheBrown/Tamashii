@@ -1,17 +1,6 @@
 use std::fmt;
 use std::path::PathBuf;
 
-#[derive(Debug)]
-pub struct DatabaseError {
-    pub message: String,
-}
-impl std::error::Error for DatabaseError {}
-
-impl fmt::Display for DatabaseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Database Error: {}", self.message)
-    }
-}
 pub trait AllowedIO: Send + Sync + std::fmt::Debug {}
 impl AllowedIO for PathBuf {}
 impl AllowedIO for &PathBuf {}
@@ -62,6 +51,27 @@ impl fmt::Display for HashError {
 pub enum HashErrorMessage {
     ComputationFailed(String),
     InvalidFormat(String),
+}
+#[derive(Debug)]
+pub struct DatabaseError {
+    pub message: String,
+}
+impl std::error::Error for DatabaseError {}
+
+impl fmt::Display for DatabaseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Database Error: {}", self.message)
+    }
+}
+pub struct FileError {
+    pub message: String,
+}
+impl std::error::Error for FileError {}
+
+impl fmt::Display for FileError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "File Error: {}", self.message)
+    }
 }
 
 pub enum VerificationError {
