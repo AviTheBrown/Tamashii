@@ -4,8 +4,10 @@ use chrono::{DateTime, Local};
 use compio::fs::File;
 use exn::Exn;
 use serde::{Deserialize, Serialize};
+use std::any::Any;
 use std::hash::Hash;
 use std::path::PathBuf;
+use std::time::UNIX_EPOCH;
 const VERSION: &str = "1.0.0";
 
 #[derive(Debug)]
@@ -95,18 +97,94 @@ impl std::fmt::Display for FileRecord {
         )
     }
 }
-pub_struct! {
+struct FileRecordBuilder<'db> {
+    database: &'db mut Database,
+    id: Option<String>,
+    path: Option<PathBuf>,
+    hash: Option<HexStirng>,
+    size: Option<u8>,
+    time_stamp: Option<std::time::SystemTime>,
+}
+impl<'db> FileRecordBuilder<'db> {
+    fn with_fields(
+        mut self,
+        id: String,
+        path: PathBuf,
+        hash: HexStirng,
+        size: u8,
+        time_stamp: std::time::SystemTime,
+    ) -> Self {
+        self.id = Some(id);
+        self.path = Some(path);
+        self.hash = Some(hash);
+        self.size = Some(size);
+        self.time_stamp = Some(time_stamp);
+        self
+    }
+    fn validate(&self) -> Result<(), Exn<DatabaseError>> {
+        if let Some(v) = &self.id {
+            if v.is_empty() {
+                return Err(Exn::new(DatabaseError {
+                    message: format!("The ID for the file is invalid"),
+                }));
+            }
+            println!("Id is valid");
+        }
+        if let Some(v) = &self.path {
+            match v.metadata() {
+                Ok(_) => println!("Path is valid"),
+                Err(err) => {
+                    return Err(Exn::new(DatabaseError {
+                        message: format!("Unable to locate file: {}", err),
+                    }));
+                }
+            }
+        }
+        if let Some(v) = &self.hash {
+            if v.to_string().is_empty() {
+                return Err(Exn::new(DatabaseError {
+                    message: format!("The HexString for the file is invalid"),
+                }));
+            }
+            println!("The Hex is valid")
+        }
+        if let Some(v) = self.size {
+            if v == 0 {
+                println!("This file seems to be empty");
+                return Err(Exn::new(DatabaseError {
+                    message: format!("The file is 0 bytes try another file"),
+                }));
+            }
+        }
+        if let Some(v) = self.time_stamp {
+            match v.duration_since(UNIX_EPOCH) {
+                Ok(_) => println!("SystemTime is valid"),
+                Err(err) => {
+                    return Err(Exn::new(DatabaseError {
+                        message: format!(
+                            "Invalid SystemTime it is earlier than UNIX_EPOCH: {}",
+                            err
+                        ),
+                    }));
+                }
+            };
+        }
+        Ok(())
+    }
+    fn commit(self) -> Result<&'db FileRecord, Exn<DatabaseError>> {}
+}
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Database {
-    version: String,
-    root_dir: PathBuf,
-    created_at: std::time::SystemTime,
-    updated_at: std::time::SystemTime,
-    files: Vec<FileRecord>,
-}
+    pub version: String,
+    pub root_dir: PathBuf,
+    pub created_at: std::time::SystemTime,
+    pub updated_at: std::time::SystemTime,
+    pub files: Vec<FileRecord>,
 }
 
 impl Database {
+    fn builder(&mut self) -> FileRecordBuilder;
+
     pub fn new() -> Result<Self, Exn<DatabaseError>> {
         let current_dir = std::env::current_dir().map_err(|err| {
             Exn::new(DatabaseError {
@@ -120,21 +198,5 @@ impl Database {
             updated_at: std::time::SystemTime::now(),
             files: vec![],
         })
-    }
-    pub async fn add_file(&self, file: &File) -> Result<(), Exn<FileError>> {
-        let added_file: compio::fs::File = File::open(file).await.map_err(|err| FileError {
-            message: format!(
-                "There was an error trying to open:{:?} with error {:?}",
-                file, err
-            ),
-        })?;
-        // FileRecord:new()
-        self.files.push(FileRecord {
-            id: (),
-            path: (),
-            hash: (),
-            size: (),
-            time_stamp: (),
-        });
     }
 }

@@ -34,7 +34,7 @@ pub const DB_PATH: &str = ".tamashii.json";
 ///
 /// ```rust
 /// use tamashii::models::Database;
-/// use tamashii::db::write_database_file;
+/// use tamashii::database::write_database_file;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let mut db = Database::new();
@@ -90,29 +90,37 @@ pub async fn write_database_file(db: &Database) -> Result<(), Exn<DatabaseError>
 ///
 /// ```rust
 /// use std::path::PathBuf;
-/// use tamashii::db::parse_database_file;
+/// use tamashii::database::parse_database_file;
 ///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let db_path = PathBuf::from(".tamashii.json");
+/// #[compio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let db_path = PathBuf::from(".tamashii.json");
 ///
-/// match parse_database_file(&db_path).await {
-///     Ok(database) => {
-///         println!("Loaded database with {} entries", database.entries.len());
+///     match parse_database_file(&db_path).await {
+///         Ok(database) => {
+///             println!("Loaded database version: {}", database.version);
+///         }
+///         Err(e) => {
+///             eprintln!("Failed to load database: {}", e);
+///         }
 ///     }
-///     Err(e) => {
-///         eprintln!("Failed to load database: {}", e);
-///     }
+///     Ok(())
 /// }
-/// # Ok(())
-/// # }
 /// ```
 ///
-/// # Implementation Details
+/// # Visual Flow
 ///
-/// The function performs three sequential operations:
-/// 1. Reads the file as raw bytes using `compio::fs::read`
-/// 2. Converts bytes to UTF-8 string slice with validation
-/// 3. Deserializes the JSON string into a `Database` struct
+/// ```text
+/// .tamashii.json (PathBuf)
+///     ↓
+/// Read raw bytes (compio::fs::read)
+///     ↓
+/// Validate UTF-8 (str::from_utf8)
+///     ↓
+/// Deserialize JSON (serde_json::from_str)
+///     ↓
+/// Database struct
+/// ```
 pub async fn parse_database_file(json_file: &PathBuf) -> Result<Database, Exn<DatabaseError>> {
     // in byte form
     let json_bytes = compio::fs::read(&json_file)
