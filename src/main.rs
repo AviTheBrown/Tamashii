@@ -27,12 +27,12 @@ async fn main() -> Result<(), Exn<InitError>> {
     let hashed_content = hash::hash_file(&file, &file_path).await.unwrap();
 
     let file_hash_stuff = models::HashedFileInfo::new(args[1].clone(), hashed_content);
-    let record = FileRecord {
-        path: file_path.to_path_buf(),
-        hash: file_hash_stuff.hashed_content,
-        size: (meta.len() as u8),
-        time_stamp: meta.created().expect("Failed to get creation time"),
-    };
+    let record = FileRecord::new(
+        file_path.to_path_buf(),
+        file_hash_stuff.hashed_content,
+        meta.len() as u8,
+        meta.created().expect("Failed to get creation time"),
+    );
 
     let Ok(test_db) = Database::new() else {
         return Err(Exn::new(InitError {
@@ -47,6 +47,7 @@ async fn main() -> Result<(), Exn<InitError>> {
     }
     match database::parse_database_file(&PathBuf::from(DB_PATH)).await {
         Ok(parsed_db) => {
+            test_db.add_file(&file);
             println!("   The Database was successfully parsed.");
             println!("   Version: {}", parsed_db.version);
             println!("   Root dir: {:?}", parsed_db.root_dir);
@@ -61,9 +62,9 @@ async fn main() -> Result<(), Exn<InitError>> {
             // let init_error = Exn::new(InitError {
             //     message: format!("There was an error parsing the database file: {}", err),
             // });
-            Err(Exn::new(InitError {
+            return Err(Exn::new(InitError {
                 message: format!("There was an error parsing the database file: {}", err),
-            }))
+            }));
         }
-    }
+    };
 }
