@@ -63,6 +63,7 @@ impl fmt::Display for DatabaseError {
         write!(f, "Database Error: {}", self.message)
     }
 }
+#[derive(Debug)]
 pub struct FileError {
     pub message: String,
 }
