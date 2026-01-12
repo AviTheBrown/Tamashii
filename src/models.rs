@@ -1,6 +1,7 @@
-use crate::errors::DatabaseError;
+use crate::errors::{DatabaseError, FileError};
 use crate::pub_struct;
-use chrono::{DateTime, Local, TimeZone, Utc};
+use chrono::{DateTime, Local};
+use compio::fs::File;
 use exn::Exn;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
@@ -21,7 +22,7 @@ impl HashedFileInfo {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HexStirng(pub String);
 impl Hash for HexStirng {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -39,13 +40,44 @@ impl std::fmt::Display for HexStirng {
     }
 }
 
-pub_struct! {
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct FileRecord {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FileRecord {
+    pub id: String,
+    path: std::path::PathBuf,
+    hash: HexStirng,
+    size: u8,
+    time_stamp: std::time::SystemTime,
+}
+
+impl FileRecord {
+    fn gen_id() -> String {
+        use rand::RngCore;
+        let mut rng = rand::rng();
+        let mut bytes = [0; 16];
+        rng.fill_bytes(&mut bytes);
+        hex::encode(bytes)
+    }
+    pub fn new(
         path: std::path::PathBuf,
         hash: HexStirng,
         size: u8,
         time_stamp: std::time::SystemTime,
+    ) -> Self {
+        return Self {
+            id: Self::gen_id(),
+            path,
+            hash,
+            size,
+            time_stamp,
+        };
+    }
+    // TODO! find a away to add file to DB files Vec<FileRecord>
+    // only if the file path has no need added to
+    // file vec previously
+    pub fn add_to_db(&self, db: &Database) -> Result<(), Exn<FileError>> {
+        if !db.files.contains(self.path) {
+            db.files.push(self.clone());
+        }
     }
 }
 
@@ -88,5 +120,21 @@ impl Database {
             updated_at: std::time::SystemTime::now(),
             files: vec![],
         })
+    }
+    pub async fn add_file(&self, file: &File) -> Result<(), Exn<FileError>> {
+        let added_file: compio::fs::File = File::open(file).await.map_err(|err| FileError {
+            message: format!(
+                "There was an error trying to open:{:?} with error {:?}",
+                file, err
+            ),
+        })?;
+        // FileRecord:new()
+        self.files.push(FileRecord {
+            id: (),
+            path: (),
+            hash: (),
+            size: (),
+            time_stamp: (),
+        });
     }
 }
