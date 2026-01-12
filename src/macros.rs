@@ -1,3 +1,33 @@
+/// A macro to define structs with automatically public or private fields.
+///
+/// By default, all fields in a struct defined with `pub_struct!` are made `pub`.
+/// To keep a field private, use the `#[private]` attribute. It also supports 
+/// other attributes like `#[derive(...)]`.
+///
+/// # Examples
+///
+/// ```rust
+/// use tamashii::pub_struct;
+///
+/// pub_struct! {
+///     #[derive(Debug)]
+///     pub struct MyStruct {
+///         public_field: String,
+///         #[private]
+///         private_field: i32,
+///     }
+/// }
+/// ```
+///
+/// # Visual Flow
+///
+/// ```text
+/// pub_struct! { struct S { f: T } }
+///      ↓
+/// parse_fields! { @build ... }
+///      ↓
+/// struct S { pub f: T }
+/// ```
 #[macro_export]
 macro_rules! pub_struct {
     (
@@ -16,6 +46,13 @@ macro_rules! pub_struct {
     };
 }
 
+/// Helper macro for `pub_struct!` to recursively parse and transform fields.
+///
+/// This macro handles:
+/// 1.  **Termination**: Emitting the final struct.
+/// 2.  **Privacy**: Specifically looking for `#[private]`.
+/// 3.  **Publicity**: Defaulting to `pub` for other fields.
+/// 4.  **Attributes**: Collecting and applying other meta attributes.
 #[macro_export]
 macro_rules! parse_fields {
     // Done - output the final struct
