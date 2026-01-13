@@ -8,7 +8,7 @@ use std::time::UNIX_EPOCH;
 const VERSION: &str = "1.0.0";
 
 /// Contains file metadata and its computed hash.
-/// 
+///
 /// This struct is used as a temporary container during the file hashing process
 /// before being converted into a permanent `FileRecord`.
 #[derive(Debug)]
@@ -36,7 +36,7 @@ impl HashedFileInfo {
 
 /// A wrapper around `String` representing a hex-encoded hash value.
 ///
-/// Provides custom `Hash`, `PartialEq`, and `Display` implementations 
+/// Provides custom `Hash`, `PartialEq`, and `Display` implementations
 /// tailored for hex strings.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HexStirng(pub String);
@@ -77,15 +77,6 @@ pub struct FileRecord {
 }
 
 impl FileRecord {
-    /// Generates a random 128-bit hex-encoded ID.
-    fn gen_id() -> String {
-        use rand::RngCore;
-        let mut rng = rand::rng();
-        let mut bytes = [0; 16];
-        rng.fill_bytes(&mut bytes);
-        hex::encode(bytes)
-    }
-
     /// Creates a new `FileRecord` with a generated ID.
     ///
     /// # Arguments
@@ -101,7 +92,7 @@ impl FileRecord {
         time_stamp: std::time::SystemTime,
     ) -> Self {
         return Self {
-            id: Self::gen_id(),
+            id: Database::gen_id(),
             path,
             hash,
             size,
@@ -127,7 +118,7 @@ impl std::fmt::Display for FileRecord {
 
 /// Builder for constructing and validating `FileRecord` instances.
 ///
-/// Ensures that all required fields are present and valid before 
+/// Ensures that all required fields are present and valid before
 /// committing the record to the database.
 struct FileRecordBuilder<'db> {
     /// Reference to the target database
@@ -146,15 +137,14 @@ struct FileRecordBuilder<'db> {
 
 impl<'db> FileRecordBuilder<'db> {
     /// Populates all builder fields in one call.
-    fn with_fields(
+    pub fn with_fields(
         mut self,
-        id: String,
         path: PathBuf,
         hash: HexStirng,
         size: u8,
         time_stamp: std::time::SystemTime,
     ) -> Self {
-        self.id = Some(id);
+        self.id = Some(Database::gen_id());
         self.path = Some(path);
         self.hash = Some(hash);
         self.size = Some(size);
@@ -164,14 +154,14 @@ impl<'db> FileRecordBuilder<'db> {
 
     /// Validates the current builder state.
     ///
-    /// Checks for empty IDs, existence of path, non-empty hashes, 
+    /// Checks for empty IDs, existence of path, non-empty hashes,
     /// non-zero sizes, and valid timestamps.
     ///
     /// # Returns
     ///
     /// * `Ok(())` if all fields are valid
     /// * `Err(Exn<DatabaseError>)` with a descriptive message if any validation fails
-    pub fn validate(&self) -> Result<(), Exn<DatabaseError>> {
+    fn validate(&self) -> Result<(), Exn<DatabaseError>> {
         if let Some(v) = &self.id {
             if v.is_empty() {
                 return Err(Exn::new(DatabaseError {
@@ -225,7 +215,7 @@ impl<'db> FileRecordBuilder<'db> {
     ///
     /// * `Ok(&FileRecord)` - A reference to the newly added record
     /// * `Err(Exn<DatabaseError>)` - If validation or insertion fails
-    fn commit(self) -> Result<&'db FileRecord, Exn<DatabaseError>> {
+    pub fn commit(self) -> Result<&'db FileRecord, Exn<DatabaseError>> {
         match self.validate() {
             Ok(_) => {
                 let file_record = FileRecord {
@@ -298,5 +288,14 @@ impl Database {
             updated_at: std::time::SystemTime::now(),
             files: vec![],
         })
+    }
+    // pub fn add_file()
+    /// Generates a random 128-bit hex-encoded ID.
+    fn gen_id() -> String {
+        use rand::RngCore;
+        let mut rng = rand::rng();
+        let mut bytes = [0; 16];
+        rng.fill_bytes(&mut bytes);
+        hex::encode(bytes)
     }
 }
