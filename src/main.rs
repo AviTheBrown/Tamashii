@@ -12,33 +12,51 @@ use crate::{database::DB_PATH, errors::InitError};
 
 #[compio::main]
 async fn main() -> Result<(), Exn<InitError>> {
+    // collect args from users
+    // for now just one
     let args: Vec<String> = std::env::args().collect();
+
+    // path that will be worked on  from args
     let file_path = Path::new(&args[1]);
 
-    //TODO turn into exn error
-    let file = files::get_file(file_path)
-        .await
-        .expect("Failed to open file");
-    //TODO turn into exn error
+    // get file
+    let file = files::get_file(file_path).await.map_err(|err| InitError {
+        message: format!("There was an error trying to use the file: {}", err),
+    })?;
+    // retrieve metadata of file
     let meta = files::get_meta(&file, &file_path)
         .await
-        .expect("Failed to retreive file metadata.");
-    //TODO turn into exn error
-    let hashed_content = hash::hash_file(&file, &file_path).await.unwrap();
+        .map_err(|err| InitError {
+            message: format!("Failed to retriece metadata: {}", err),
+        })?;
+    // hash the contents of the file
+    let hashed_file_content = hash::hash_file(&file, &file_path).await.map_err(|err| {
+        Exn::new(InitError {
+            message: format!("Failed to hash {:?}'s contents: {}", file_path, err),
+        })
+    })?;
 
-    let file_hash_stuff = models::HashedFileInfo::new(args[1].clone(), hashed_content);
-    let record = FileRecord::new(
-        file_path.to_path_buf(),
-        file_hash_stuff.hashed_content,
-        meta.len() as u8,
-        meta.created().expect("Failed to get creation time"),
-    );
+    // create a instace of FileRecord
+    // let record = FileRecord::new(
+    //     file_path.to_path_buf(),
+    //     hashed_file_content,
+    //     // file_hash_stuff.hashed_content,
+    //     meta.len() as u8,
+    //     meta.created().expect("Failed to get creation time"),
+    // );
 
     let Ok(test_db) = Database::new() else {
         return Err(Exn::new(InitError {
             message: format!("Database::new() failed with error "),
         }));
     };
+    test_db.builder().with_fields(
+        file_path.to_path_buf(),
+        hashed_file_content,
+        meta.len() as u8,
+        meta.created().expect("Failed to get creation time"),
+    );
+
     match database::write_database_file(&test_db).await {
         Ok(_) => {
             println!("Successfuly wrote to databas")
