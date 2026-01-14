@@ -2,9 +2,14 @@ use crate::errors::DatabaseError;
 use crate::models::Database;
 use exn::{Exn, ResultExt};
 use serde_json;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+/// Default filename for the Tamashii database file.
+///
+/// This JSON file stores the `Database` structure, including versioning,
+/// root directory information, and all tracked `FileRecord` entries.
 pub const DB_PATH: &str = ".tamashii.json";
+
 
 /// Serializes and writes the database to disk as pretty-printed JSON.
 ///
@@ -45,7 +50,7 @@ pub const DB_PATH: &str = ".tamashii.json";
 /// # Ok(())
 /// # }
 /// ```
-pub async fn write_database_file(db: &Database) -> Result<(), Exn<DatabaseError>> {
+pub async fn serialize_database(db: &Database) -> Result<(), Exn<DatabaseError>> {
     let json_data = serde_json::to_string_pretty(db).or_raise(|| DatabaseError {
         message: format!("There was an error trying to get the database."),
     })?;
@@ -121,7 +126,7 @@ pub async fn write_database_file(db: &Database) -> Result<(), Exn<DatabaseError>
 ///     ↓
 /// Database struct
 /// ```
-pub async fn parse_database_file(json_file: &PathBuf) -> Result<Database, Exn<DatabaseError>> {
+pub async fn parse_database_file(json_file: &Path) -> Result<Database, Exn<DatabaseError>> {
     // in byte form
     let json_bytes = compio::fs::read(&json_file)
         .await
