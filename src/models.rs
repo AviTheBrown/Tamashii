@@ -1,4 +1,5 @@
-use crate::errors::DatabaseError;
+use crate::database::{parse_database_file, serialize_database};
+use crate::errors::{DatabaseError, InitError};
 use chrono::{DateTime, Local};
 use exn::Exn;
 use serde::{Deserialize, Serialize};
@@ -6,33 +7,6 @@ use std::hash::Hash;
 use std::path::PathBuf;
 use std::time::UNIX_EPOCH;
 const VERSION: &str = "1.0.0";
-
-/// Contains file metadata and its computed hash.
-///
-/// This struct is used as a temporary container during the file hashing process
-/// before being converted into a permanent `FileRecord`.
-#[derive(Debug)]
-pub struct HashedFileInfo {
-    /// The original name of the file
-    pub file_name: String,
-    /// The computed hex-encoded hash of the file content
-    pub hashed_content: HexStirng,
-}
-
-impl HashedFileInfo {
-    /// Creates a new `HashedFileInfo` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `file_name` - The name of the file
-    /// * `hashed_content` - The computed hash value
-    pub fn new(file_name: String, hashed_content: HexStirng) -> Self {
-        return Self {
-            file_name,
-            hashed_content,
-        };
-    }
-}
 
 /// A wrapper around `String` representing a hex-encoded hash value.
 ///
@@ -287,6 +261,36 @@ impl Database {
             created_at: std::time::SystemTime::now(),
             updated_at: std::time::SystemTime::now(),
             files: vec![],
+        })
+    }
+    /// Loads the database from a JSON file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the `.tamashii.json` database file
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Database)` - The loaded database instance
+    /// * `Err(Exn<InitError>)` - If loading or parsing fails
+    pub async fn load(path: &PathBuf) -> Result<Database, Exn<InitError>> {
+        parse_database_file(path).await.map_err(|db_err| {
+            let err_msg = format!("Failed to load DB file: {}", db_err);
+            db_err.raise(InitError { message: err_msg })
+        })
+    }
+
+    /// Saves the current database state to disk.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Successfully saved the database
+    /// * `Err(Exn<DatabaseError>)` - If serialization or writing fails
+    pub async fn save(&self) -> Result<(), Exn<DatabaseError>> {
+        serialize_database(self).await.map_err(|db_err| {
+            Exn::new(DatabaseError {
+                message: format!("Failed to save the DB: {}", db_err),
+            })
         })
     }
     // pub fn add_file()
