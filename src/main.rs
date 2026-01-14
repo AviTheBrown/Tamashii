@@ -5,11 +5,8 @@ mod hash;
 mod macros;
 mod models;
 use exn::Exn;
-use models::{Database, FileRecord};
-use std::{
-    path::{Path, PathBuf},
-    rc::Rc,
-};
+use models::Database;
+use std::path::{Path, PathBuf};
 
 use crate::{database::DB_PATH, errors::InitError};
 
