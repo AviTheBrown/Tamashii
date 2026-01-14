@@ -6,7 +6,10 @@ mod macros;
 mod models;
 use exn::Exn;
 use models::{Database, FileRecord};
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 use crate::{database::DB_PATH, errors::InitError};
 
@@ -57,9 +60,9 @@ async fn main() -> Result<(), Exn<InitError>> {
         meta.created().expect("Failed to get creation time"),
     );
 
-    match database::write_database_file(&test_db).await {
+    match database::serialize_database(&test_db).await {
         Ok(_) => {
-            println!("Successfuly wrote to databas")
+            println!("Successfuly wrote to database")
         }
         Err(_) => eprintln!("Failed to write to database"),
     }
