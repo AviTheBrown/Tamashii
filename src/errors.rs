@@ -114,8 +114,8 @@ pub enum VerificationError {
     },
     /// The file exists but is not tracked in the database
     FileUntracked(PathBuf),
-    /// An I/O failure occurred during verification
+    /// An I/O failure occurred during the verification process
     IoFailure,
-    /// A hashing failure occurred during verification
+    /// A hashing failure occurred during the verification process
     HashFailure,
 }
