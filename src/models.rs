@@ -231,6 +231,26 @@ pub struct Database {
 }
 
 impl Database {
+    pub async fn get_or_create_db(path: &str) -> Result<Database, Exn<InitError>> {
+        let path_ = std::path::Path::new(path);
+        // take sad path first
+        if !path_.exists() {
+            match Self::new().await {
+                Ok(db) => Ok(db),
+                Err(err) => {
+                    let err_msg = format!("This file does not exist {}", err);
+                    Err(Exn::new(InitError { message: err_msg }))
+                }
+            }
+        } else {
+            match Self::load(&path_.to_path_buf()).await {
+                Ok(db) => Ok(db),
+                Err(err) => Err(Exn::new(InitError {
+                    message: format!("There was a problem loading the JSON file: {}", err),
+                })),
+            }
+        }
+    }
     /// Returns a new `FileRecordBuilder` associated with this database.
     pub fn builder(&mut self) -> FileRecordBuilder {
         FileRecordBuilder {
@@ -249,9 +269,9 @@ impl Database {
     ///
     /// * `Ok(Self)` - Initialized database instance
     /// * `Err(Exn<DatabaseError>)` - If the current directory cannot be determined
-    pub fn new() -> Result<Self, Exn<DatabaseError>> {
+    pub async fn new() -> Result<Self, Exn<InitError>> {
         let current_dir = std::env::current_dir().map_err(|err| {
-            Exn::new(DatabaseError {
+            Exn::new(InitError {
                 message: format!("Failed to get current directory: {}", err),
             })
         })?;
