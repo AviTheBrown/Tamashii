@@ -5,7 +5,6 @@ use exn::Exn;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use std::path::PathBuf;
-use std::time::UNIX_EPOCH;
 const VERSION: &str = "1.0.0";
 
 /// A wrapper around `String` representing a hex-encoded hash value.
@@ -46,8 +45,8 @@ pub struct FileRecord {
     pub hash: HexStirng,
     /// Size of the file in bytes (up to 255 bytes for this specific implementation)
     pub size: u8,
-    /// System time when the file was indexed
-    pub time_stamp: std::time::SystemTime,
+    /// Time when the file was indexed
+    pub time_stamp: DateTime<Local>,
 }
 
 impl FileRecord {
@@ -63,7 +62,7 @@ impl FileRecord {
         path: std::path::PathBuf,
         hash: HexStirng,
         size: u8,
-        time_stamp: std::time::SystemTime,
+        time_stamp: DateTime<Local>,
     ) -> Self {
         return Self {
             id: Database::gen_id(),
@@ -77,8 +76,7 @@ impl FileRecord {
 
 impl std::fmt::Display for FileRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let datetime: DateTime<Local> = self.time_stamp.into();
-        let formatted_time = datetime.format("%Y-%m-%d %H:%M:%S");
+        let formatted_time = self.time_stamp.format("%Y-%m-%d %H:%M:%S");
         write!(
             f,
             "File name: {}\nHash: {}\nSize: {} bytes\nCreated: {}",
@@ -94,19 +92,18 @@ impl std::fmt::Display for FileRecord {
 ///
 /// Ensures that all required fields are present and valid before
 /// committing the record to the database.
-struct FileRecordBuilder<'db> {
+pub struct FileRecordBuilder<'db> {
     /// Reference to the target database
-    pub database: &'db mut Database,
-    /// Optional unique identifier
-    pub id: Option<String>,
+    pub db: &'db mut Database,
     /// Optional file path
+    pub id: Option<String>,
     pub path: Option<PathBuf>,
     /// Optional file hash
     pub hash: Option<HexStirng>,
     /// Optional file size
     pub size: Option<u8>,
     /// Optional timestamp
-    pub time_stamp: Option<std::time::SystemTime>,
+    pub time_stamp: Option<DateTime<Local>>,
 }
 
 impl<'db> FileRecordBuilder<'db> {
@@ -116,7 +113,7 @@ impl<'db> FileRecordBuilder<'db> {
         path: PathBuf,
         hash: HexStirng,
         size: u8,
-        time_stamp: std::time::SystemTime,
+        time_stamp: DateTime<Local>,
     ) -> Self {
         self.id = Some(Database::gen_id());
         self.path = Some(path);
@@ -128,57 +125,41 @@ impl<'db> FileRecordBuilder<'db> {
 
     /// Validates the current builder state.
     ///
-    /// Checks for empty IDs, existence of path, non-empty hashes,
-    /// non-zero sizes, and valid timestamps.
+    /// Ensures that all required fields (ID, path, hash, size, and timestamp) 
+    /// have been populated before committing to the database.
     ///
     /// # Returns
     ///
-    /// * `Ok(())` if all fields are valid
-    /// * `Err(Exn<DatabaseError>)` with a descriptive message if any validation fails
-    fn validate(&self) -> Result<(), Exn<DatabaseError>> {
-        if let Some(v) = &self.id {
-            if v.is_empty() {
-                return Err(Exn::new(DatabaseError {
-                    message: format!("The ID for the file is invalid"),
-                }));
-            }
+    /// * `Ok(())` if all fields are present
+    /// * `Err(Exn<DatabaseError>)` with a descriptive message if any field is missing
+    pub fn validate(&self) -> Result<(), Exn<DatabaseError>> {
+        if self.id.is_none() {
+            return Err(Exn::new(DatabaseError {
+                message: "ID is missing".into(),
+            }));
         }
-        if let Some(v) = &self.path {
-            match v.metadata() {
-                Ok(_) => (),
-                Err(err) => {
-                    return Err(Exn::new(DatabaseError {
-                        message: format!("Unable to locate file: {}", err),
-                    }));
-                }
-            }
+        if self.path.is_none() {
+            return Err(Exn::new(DatabaseError {
+                message: "Path is missing".into(),
+            }));
         }
-        if let Some(v) = &self.hash {
-            if v.to_string().is_empty() {
-                return Err(Exn::new(DatabaseError {
-                    message: format!("The HexString for the file is invalid"),
-                }));
-            }
+        
+        if self.hash.is_none() {
+            return Err(Exn::new(DatabaseError {
+                message: "Hash is missing".into(),
+            }));
         }
-        if let Some(v) = self.size {
-            if v == 0 {
-                return Err(Exn::new(DatabaseError {
-                    message: format!("The file is 0 bytes try another file"),
-                }));
-            }
+
+        if self.size.is_none() {
+            return Err(Exn::new(DatabaseError {
+                message: "Size is missing".into(),
+            }));
         }
-        if let Some(v) = self.time_stamp {
-            match v.duration_since(UNIX_EPOCH) {
-                Ok(_) => (),
-                Err(err) => {
-                    return Err(Exn::new(DatabaseError {
-                        message: format!(
-                            "Invalid SystemTime it is earlier than UNIX_EPOCH: {}",
-                            err
-                        ),
-                    }));
-                }
-            };
+
+        if self.time_stamp.is_none() {
+            return Err(Exn::new(DatabaseError {
+                message: "Timestamp is missing".into(),
+            }));
         }
         Ok(())
     }
@@ -190,26 +171,18 @@ impl<'db> FileRecordBuilder<'db> {
     /// * `Ok(&FileRecord)` - A reference to the newly added record
     /// * `Err(Exn<DatabaseError>)` - If validation or insertion fails
     pub fn commit(self) -> Result<&'db FileRecord, Exn<DatabaseError>> {
-        match self.validate() {
-            Ok(_) => {
-                let file_record = FileRecord {
-                    id: self.id.unwrap(),
-                    path: self.path.unwrap(),
-                    hash: self.hash.unwrap(),
-                    size: self.size.unwrap(),
-                    time_stamp: self.time_stamp.unwrap(),
-                };
+        self.validate()?;
 
-                self.database.files.push(file_record);
-                Ok(self.database.files.last().unwrap())
-            }
-            Err(err) => Err(Exn::new(DatabaseError {
-                message: format!(
-                    "There was problem validating and commiting the FileRecord: {}",
-                    err
-                ),
-            })),
-        }
+        let record = FileRecord {
+            id: self.id.unwrap(),
+            path: self.path.unwrap(),
+            hash: self.hash.unwrap(),
+            size: self.size.unwrap(),
+            time_stamp: self.time_stamp.unwrap(),
+        };
+
+        self.db.files.push(record);
+        Ok(self.db.files.last().unwrap())
     }
 }
 
@@ -223,9 +196,9 @@ pub struct Database {
     /// Root directory of the tracked files
     pub root_dir: PathBuf,
     /// Database creation timestamp
-    pub created_at: std::time::SystemTime,
+    pub created_at: DateTime<Local>,
     /// Database last update timestamp
-    pub updated_at: std::time::SystemTime,
+    pub updated_at: DateTime<Local>,
     /// List of tracked file records
     pub files: Vec<FileRecord>,
 }
@@ -233,28 +206,16 @@ pub struct Database {
 impl Database {
     pub async fn get_or_create_db(path: &str) -> Result<Database, Exn<InitError>> {
         let path_ = std::path::Path::new(path);
-        // take sad path first
         if !path_.exists() {
-            match Self::new().await {
-                Ok(db) => Ok(db),
-                Err(err) => {
-                    let err_msg = format!("This file does not exist {}", err);
-                    Err(Exn::new(InitError { message: err_msg }))
-                }
-            }
+            Self::new()
         } else {
-            match Self::load(&path_.to_path_buf()).await {
-                Ok(db) => Ok(db),
-                Err(err) => Err(Exn::new(InitError {
-                    message: format!("There was a problem loading the JSON file: {}", err),
-                })),
-            }
+            Self::load(&path_.to_path_buf()).await
         }
     }
     /// Returns a new `FileRecordBuilder` associated with this database.
-    pub fn builder(&mut self) -> FileRecordBuilder {
+    pub fn builder(&mut self) -> FileRecordBuilder<'_> {
         FileRecordBuilder {
-            database: self,
+            db: self,
             id: None,
             path: None,
             hash: None,
@@ -269,7 +230,7 @@ impl Database {
     ///
     /// * `Ok(Self)` - Initialized database instance
     /// * `Err(Exn<DatabaseError>)` - If the current directory cannot be determined
-    pub async fn new() -> Result<Self, Exn<InitError>> {
+    pub fn new() -> Result<Self, Exn<InitError>> {
         let current_dir = std::env::current_dir().map_err(|err| {
             Exn::new(InitError {
                 message: format!("Failed to get current directory: {}", err),
@@ -278,11 +239,12 @@ impl Database {
         Ok(Self {
             version: VERSION.to_string(),
             root_dir: PathBuf::from(current_dir),
-            created_at: std::time::SystemTime::now(),
-            updated_at: std::time::SystemTime::now(),
+            created_at: Local::now(),
+            updated_at: Local::now(),
             files: vec![],
         })
     }
+
     /// Loads the database from a JSON file.
     ///
     /// # Arguments
@@ -293,7 +255,7 @@ impl Database {
     ///
     /// * `Ok(Database)` - The loaded database instance
     /// * `Err(Exn<InitError>)` - If loading or parsing fails
-    pub async fn load(path: &PathBuf) -> Result<Database, Exn<InitError>> {
+    pub async fn load(path: &PathBuf) -> Result<Self, Exn<InitError>> {
         parse_database_file(path).await.map_err(|db_err| {
             let err_msg = format!("Failed to load DB file: {}", db_err);
             db_err.raise(InitError { message: err_msg })
