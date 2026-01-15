@@ -6,7 +6,7 @@ mod macros;
 mod models;
 use exn::Exn;
 use models::Database;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::{database::DB_PATH, errors::InitError};
 
@@ -45,44 +45,22 @@ async fn main() -> Result<(), Exn<InitError>> {
     //     meta.created().expect("Failed to get creation time"),
     // );
 
-    let Ok(test_db) = Database::new() else {
-        return Err(Exn::new(InitError {
-            message: format!("Database::new() failed with error "),
-        }));
-    };
-    test_db.builder().with_fields(
-        file_path.to_path_buf(),
-        hashed_file_content,
-        meta.len() as u8,
-        meta.created().expect("Failed to get creation time"),
-    );
+    let mut test_db = Database::get_or_create_db(DB_PATH).await?;
+    test_db
+        .builder()
+        .with_fields(
+            file_path.to_path_buf(),
+            hashed_file_content,
+            meta.len() as u8,
+            meta.created().expect("Failed to get creation time").into(),
+        )
+        .commit().map_err(|err| Exn::new(InitError {
+            message: format!("Failed to commit database changes: {}", err),
+        }))?;
 
-    match database::serialize_database(&test_db).await {
-        Ok(_) => {
-            println!("Successfuly wrote to database")
-        }
-        Err(_) => eprintln!("Failed to write to database"),
-    }
-    match database::parse_database_file(&PathBuf::from(DB_PATH)).await {
-        Ok(parsed_db) => {
-            test_db.add_file(&file);
-            println!("   The Database was successfully parsed.");
-            println!("   Version: {}", parsed_db.version);
-            println!("   Root dir: {:?}", parsed_db.root_dir);
-            println!("   Files tracked: {}", parsed_db.files.len());
+    test_db.save().await.map_err(|err| Exn::new(InitError {
+        message: format!("Failed to save database: {}", err),
+    }))?;
 
-            for file in &parsed_db.files {
-                println!("{:?} ({})", file.path, file.hash);
-            }
-            return Ok(());
-        }
-        Err(err) => {
-            // let init_error = Exn::new(InitError {
-            //     message: format!("There was an error parsing the database file: {}", err),
-            // });
-            return Err(Exn::new(InitError {
-                message: format!("There was an error parsing the database file: {}", err),
-            }));
-        }
-    };
+    Ok(())
 }
