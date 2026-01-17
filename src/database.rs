@@ -10,7 +10,6 @@ use std::path::{Path, PathBuf};
 /// root directory information, and all tracked `FileRecord` entries.
 pub const DB_PATH: &str = ".tamashii.json";
 
-
 /// Serializes and writes the database to disk as pretty-printed JSON.
 ///
 /// This function takes a reference to a `Database` instance, serializes it to
@@ -52,7 +51,7 @@ pub const DB_PATH: &str = ".tamashii.json";
 /// ```
 pub async fn serialize_database(db: &Database) -> Result<(), Exn<DatabaseError>> {
     let json_data = serde_json::to_string_pretty(db).or_raise(|| DatabaseError {
-        message: format!("There was an error trying to get the database."),
+        message: format!("Failed to serialize database to JSON"),
     })?;
     // creates .tamashii.json if it doesnt exist
     compio::fs::write(PathBuf::from(DB_PATH), json_data)
