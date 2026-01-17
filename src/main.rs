@@ -54,13 +54,17 @@ async fn main() -> Result<(), Exn<InitError>> {
             meta.len() as u8,
             meta.created().expect("Failed to get creation time").into(),
         )
-        .commit().map_err(|err| Exn::new(InitError {
-            message: format!("Failed to commit database changes: {}", err),
-        }))?;
+        .commit()
+        .map_err(|err| {
+            Exn::new(InitError {
+                message: format!("Failed to commit database changes: {}", err),
+            })
+        })?;
 
-    test_db.save().await.map_err(|err| Exn::new(InitError {
-        message: format!("Failed to save database: {}", err),
-    }))?;
-
+    test_db.save().await.map_err(|err| {
+        Exn::new(InitError {
+            message: format!("Failed to save database: {}", err),
+        })
+    })?;
     Ok(())
 }
