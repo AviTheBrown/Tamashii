@@ -49,30 +49,7 @@ pub struct FileRecord {
     pub time_stamp: DateTime<Local>,
 }
 
-impl FileRecord {
-    /// Creates a new `FileRecord` with a generated ID.
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - Path to the file
-    /// * `hash` - Computed hash of the file
-    /// * `size` - Size of the file in bytes
-    /// * `time_stamp` - Creation/Modification time
-    pub fn new(
-        path: std::path::PathBuf,
-        hash: HexStirng,
-        size: u8,
-        time_stamp: DateTime<Local>,
-    ) -> Self {
-        return Self {
-            id: Database::gen_id(),
-            path,
-            hash,
-            size,
-            time_stamp,
-        };
-    }
-}
+impl FileRecord {}
 
 impl std::fmt::Display for FileRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -125,7 +102,7 @@ impl<'db> FileRecordBuilder<'db> {
 
     /// Validates the current builder state.
     ///
-    /// Ensures that all required fields (ID, path, hash, size, and timestamp) 
+    /// Ensures that all required fields (ID, path, hash, size, and timestamp)
     /// have been populated before committing to the database.
     ///
     /// # Returns
@@ -143,7 +120,7 @@ impl<'db> FileRecordBuilder<'db> {
                 message: "Path is missing".into(),
             }));
         }
-        
+
         if self.hash.is_none() {
             return Err(Exn::new(DatabaseError {
                 message: "Hash is missing".into(),
@@ -182,6 +159,8 @@ impl<'db> FileRecordBuilder<'db> {
         };
 
         self.db.files.push(record);
+        self.db.updated_at = chrono::Local::now();
+
         Ok(self.db.files.last().unwrap())
     }
 }
@@ -269,11 +248,8 @@ impl Database {
     /// * `Ok(())` - Successfully saved the database
     /// * `Err(Exn<DatabaseError>)` - If serialization or writing fails
     pub async fn save(&self) -> Result<(), Exn<DatabaseError>> {
-        serialize_database(self).await.map_err(|db_err| {
-            Exn::new(DatabaseError {
-                message: format!("Failed to save the DB: {}", db_err),
-            })
-        })
+        serialize_database(self).await
+        // Ok(())
     }
     // pub fn add_file()
     /// Generates a random 128-bit hex-encoded ID.
