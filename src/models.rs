@@ -1,6 +1,6 @@
 use crate::database::{parse_database_file, serialize_database};
 use crate::errors::{DatabaseError, InitError};
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Utc};
 use exn::Exn;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
@@ -45,8 +45,9 @@ pub struct FileRecord {
     pub hash: HexStirng,
     /// Size of the file in bytes (up to 255 bytes for this specific implementation)
     pub size: u8,
+    #[serde(with = "chrono::serde::ts_seconds")]
     /// Time when the file was indexed
-    pub time_stamp: DateTime<Local>,
+    pub time_stamp: DateTime<Utc>,
 }
 
 impl FileRecord {}
@@ -79,8 +80,9 @@ pub struct FileRecordBuilder<'db> {
     pub hash: Option<HexStirng>,
     /// Optional file size
     pub size: Option<u8>,
+    #[serde(with = "chrono::serde::ts_seconds")]
     /// Optional timestamp
-    pub time_stamp: Option<DateTime<Local>>,
+    pub time_stamp: Option<DateTime<Utc>>,
 }
 
 impl<'db> FileRecordBuilder<'db> {
@@ -90,7 +92,7 @@ impl<'db> FileRecordBuilder<'db> {
         path: PathBuf,
         hash: HexStirng,
         size: u8,
-        time_stamp: DateTime<Local>,
+        time_stamp: DateTime<Utc>,
     ) -> Self {
         self.id = Some(Database::gen_id());
         self.path = Some(path);
@@ -159,8 +161,7 @@ impl<'db> FileRecordBuilder<'db> {
         };
 
         self.db.files.push(record);
-        self.db.updated_at = chrono::Local::now();
-
+        self.db.updated_at = chrono::Utc::now();
         Ok(self.db.files.last().unwrap())
     }
 }
@@ -174,10 +175,12 @@ pub struct Database {
     pub version: String,
     /// Root directory of the tracked files
     pub root_dir: PathBuf,
+    #[serde(with = "chrono::serde::ts_seconds")]
     /// Database creation timestamp
-    pub created_at: DateTime<Local>,
+    pub created_at: DateTime<Utc>,
     /// Database last update timestamp
-    pub updated_at: DateTime<Local>,
+    #[serde(with = "chrono::serde::ts_seconds")]
+    pub updated_at: DateTime<Utc>,
     /// List of tracked file records
     pub files: Vec<FileRecord>,
 }
@@ -218,8 +221,8 @@ impl Database {
         Ok(Self {
             version: VERSION.to_string(),
             root_dir: PathBuf::from(current_dir),
-            created_at: Local::now(),
-            updated_at: Local::now(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
             files: vec![],
         })
     }
