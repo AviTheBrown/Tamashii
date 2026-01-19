@@ -1,13 +1,7 @@
 {
   "version": "1.0.0",
   "root_dir": "/Users/avibrown/Desktop/Rust/tamashii",
-  "created_at": {
-    "secs_since_epoch": 1768104315,
-    "nanos_since_epoch": 352449000
-  },
-  "updated_at": {
-    "secs_since_epoch": 1768104315,
-    "nanos_since_epoch": 352449000
-  },
+  "created_at": 1768778445,
+  "updated_at": 1768778445,
   "files": []
 }
