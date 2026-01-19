@@ -16,7 +16,7 @@ impl AllowedIO for &PathBuf {}
 /// * `T` - The type of the path, must implement `AllowedIO`
 pub struct IoError<T: AllowedIO> {
     /// The path where the I/O error occurred
-    pub path: T,
+    pub path: Option<T>,
     /// A descriptive error message
     pub message: String,
 }
@@ -108,9 +108,9 @@ impl fmt::Display for FileError {
 /// Enumeration of errors that can occur during file verification.
 pub enum VerificationError {
     /// The file's current hash does not match the stored hash
-    HashMissMatched { 
+    HashMissMatched {
         /// Path to the inconsistent file
-        path: PathBuf 
+        path: PathBuf,
     },
     /// The file exists but is not tracked in the database
     FileUntracked(PathBuf),
