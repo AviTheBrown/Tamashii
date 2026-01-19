@@ -59,23 +59,26 @@ async fn main() -> Result<(), Exn<InitError>> {
 }
 #[cfg(test)]
 mod test {
-    use chrono::Utc;
     use exn::ResultExt;
+    use tempfile::NamedTempFile;
 
     use super::*;
-    use crate::{
-        hash::hash_bytes,
-        models::{HexStirng, VERSION},
-    };
-    use std::{
-        env::{current_dir, temp_dir},
-        io::Write,
-        path::PathBuf,
-    };
+    use crate::{hash::hash_bytes, models::VERSION};
+    use std::{io::Write, path::PathBuf};
 
     #[compio::test]
     async fn create_db() -> Result<(), Exn<InitError>> {
-        let db = Database::get_or_create_db(DB_PATH).await?;
+        let mut temp_db_path = tempfile::NamedTempFile::new().or_raise(|| InitError {
+            message: "Failed trying to create a new DB instance".into(),
+        })?;
+        let content = std::fs::read(DB_PATH).or_raise(|| InitError {
+            message: "Failed trying to create a new DB instance".into(),
+        })?;
+        std::io::Write::write_all(&mut temp_db_path, &content).or_raise(|| InitError {
+            message: "Failed trying to create a new DB instance".into(),
+        })?;
+
+        let db = Database::new()?;
         println!("The db: {:?}", db);
         Ok(())
     }
@@ -118,6 +121,33 @@ mod test {
         let _ = test_db.save().await.or_raise(|| InitError {
             message: "Failed to save DB".into(),
         });
+        Ok(())
+    }
+    #[compio::test]
+    async fn load_db() -> Result<(), Exn<InitError>> {
+        let mut test_tamashii = NamedTempFile::new().or_raise(|| InitError {
+            message: "Failed trying to create a new DB instance".into(),
+        })?;
+        let contents = std::fs::read(DB_PATH).or_raise(|| InitError {
+            message: "Failed trying to create a new DB instance".into(),
+        })?;
+        std::io::Write::write_all(&mut test_tamashii, &contents).or_raise(|| InitError {
+            message: "Failed trying to create a new DB instance".into(),
+        })?;
+        let db = Database::get_or_create_db(
+            test_tamashii
+                .path()
+                .to_str()
+                .expect("Path is not valid UTF-8"),
+        )
+        .await
+        .or_raise(|| InitError {
+            message: "Failed trying to create a new DB instance".into(),
+        })?;
+        println!("DB files count: {}", db.files.len());
+        println!("DB created_at: {}", db.created_at);
+        assert!(db.files.is_empty());
+        // let _ = test_tamashii.flush();
         Ok(())
     }
 }
