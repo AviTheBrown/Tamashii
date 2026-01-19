@@ -5,7 +5,7 @@ use exn::Exn;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use std::path::PathBuf;
-const VERSION: &str = "1.0.0";
+pub const VERSION: &str = "1.0.0";
 
 /// A wrapper around `String` representing a hex-encoded hash value.
 ///
@@ -80,7 +80,6 @@ pub struct FileRecordBuilder<'db> {
     pub hash: Option<HexStirng>,
     /// Optional file size
     pub size: Option<u8>,
-    #[serde(with = "chrono::serde::ts_seconds")]
     /// Optional timestamp
     pub time_stamp: Option<DateTime<Utc>>,
 }
