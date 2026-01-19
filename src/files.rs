@@ -49,10 +49,13 @@ use std::path::{Path, PathBuf};
 ///     Ok(())
 /// }
 /// ```
-pub async fn get_file(file_path: &Path) -> Result<File, Exn<IoError<PathBuf>>> {
+pub async fn get_file<P: AsRef<Path>>(file_path: &P) -> Result<File, Exn<IoError<PathBuf>>> {
     File::open(file_path).await.or_raise(|| IoError {
-        path: file_path.to_path_buf(),
-        message: format!("\nFailed to get file: {:?}", file_path.to_path_buf()),
+        path: Some(file_path.as_ref().to_path_buf()),
+        message: format!(
+            "\nFailed to get file: {:?}",
+            file_path.as_ref().to_path_buf()
+        ),
     })
 }
 /// Retrieves metadata for an opened file asynchronously with enhanced error context.
@@ -109,9 +112,9 @@ pub async fn get_file(file_path: &Path) -> Result<File, Exn<IoError<PathBuf>>> {
 ///     ↓
 ///   Metadata { size, permissions, modified_time, ... }
 /// ```
-pub async fn get_meta(file: &File, file_path: &Path) -> Result<Metadata, Exn<IoError<PathBuf>>> {
+pub async fn get_meta(file: &File) -> Result<Metadata, Exn<IoError<PathBuf>>> {
     file.metadata().await.or_raise(|| IoError {
-        path: file_path.to_path_buf(),
+        path: None,
         message: format!("Failed to get metadata from file: {:?}", &file),
     })
 }
