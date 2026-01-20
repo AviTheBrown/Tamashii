@@ -85,7 +85,14 @@ pub struct FileRecordBuilder<'db> {
 }
 
 impl<'db> FileRecordBuilder<'db> {
-    /// Populates all builder fields in one call.
+    /// Populates all builder fields in one call and generates a new unique ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The absolute path of the file to record
+    /// * `hash` - The computed hash of the file
+    /// * `size` - The size of the file in bytes
+    /// * `time_stamp` - The creation or indexing timestamp
     pub fn with_fields(
         mut self,
         path: PathBuf,
@@ -185,6 +192,16 @@ pub struct Database {
 }
 
 impl Database {
+    /// Returns an existing database from the specified path or creates a new one if it doesn't exist.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The file system path where the database file is located
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Database)` - The loaded or newly created database instance
+    /// * `Err(Exn<InitError>)` - If loading or initialization fails
     pub async fn get_or_create_db(path: &str) -> Result<Database, Exn<InitError>> {
         let path_ = std::path::Path::new(path);
         if !path_.exists() {
@@ -194,6 +211,9 @@ impl Database {
         }
     }
     /// Returns a new `FileRecordBuilder` associated with this database.
+    ///
+    /// The builder is used to create and validate `FileRecord` instances before
+    /// adding them to the database.
     pub fn builder(&mut self) -> FileRecordBuilder<'_> {
         FileRecordBuilder {
             db: self,
@@ -251,7 +271,6 @@ impl Database {
     /// * `Err(Exn<DatabaseError>)` - If serialization or writing fails
     pub async fn save(&self) -> Result<(), Exn<DatabaseError>> {
         serialize_database(self).await
-        // Ok(())
     }
     // pub fn add_file()
     /// Generates a random 128-bit hex-encoded ID.

@@ -10,8 +10,17 @@ use std::path::Path;
 
 use crate::{database::DB_PATH, errors::InitError};
 
+/// The entry point of the Tamashii CLI application.
+///
+/// This function parses command-line arguments, calculates the hash of a target file,
+/// and updates the local database with a new `FileRecord`.
+///
+/// # Returns
+///
+/// * `Ok(())` - Successfully processed the file and updated the database
+/// * `Err(Exn<InitError>)` - If any fatal error occurs during execution
 #[compio::main]
-async fn main() -> Result<(), Exn<InitError>> {
+pub async fn main() -> Result<(), Exn<InitError>> {
     // collect args from users
     // for now just one
     let args: Vec<String> = std::env::args().collect();
@@ -66,6 +75,7 @@ mod test {
     use crate::{hash::hash_bytes, models::VERSION};
     use std::{io::Write, path::PathBuf};
 
+    /// Tests basic database creation and working directory initialization.
     #[compio::test]
     async fn create_db() -> Result<(), Exn<InitError>> {
         let mut temp_db_path = tempfile::NamedTempFile::new().or_raise(|| InitError {
@@ -82,6 +92,7 @@ mod test {
         println!("The db: {:?}", db);
         Ok(())
     }
+    /// Tests file opening logic with non-existent paths.
     #[compio::test]
     async fn create_file() -> Result<(), Exn<errors::IoError<PathBuf>>> {
         let tmp = tempfile::tempdir().map_err(|err| errors::IoError {
@@ -92,6 +103,7 @@ mod test {
         let _ = files::get_file(&path).await;
         Ok(())
     }
+    /// Verifies that hashing the same input twice produces consistent results.
     #[compio::test]
     async fn hash_known_input() {
         let input = b"random-input-input";
@@ -99,6 +111,7 @@ mod test {
         let h2 = hash_bytes(input);
         assert_eq!(h1, h2)
     }
+    /// Tests database building from scratch.
     #[compio::test]
     async fn build_db() -> Result<(), Exn<InitError>> {
         let test_db = Database::new().or_raise(|| InitError {
@@ -113,6 +126,7 @@ mod test {
         assert_eq!(test_db.root_dir, PathBuf::from(current_dir));
         Ok(())
     }
+    /// Verifies that a database instance can be saved to disk.
     #[compio::test]
     async fn save_db() -> Result<(), Exn<InitError>> {
         let test_db = Database::new().or_raise(|| InitError {
@@ -123,6 +137,7 @@ mod test {
         });
         Ok(())
     }
+    /// Tests loading a database from a temporary file.
     #[compio::test]
     async fn load_db() -> Result<(), Exn<InitError>> {
         let mut test_tamashii = NamedTempFile::new().or_raise(|| InitError {

@@ -61,18 +61,16 @@ pub async fn get_file<P: AsRef<Path>>(file_path: &P) -> Result<File, Exn<IoError
 /// Retrieves metadata for an opened file asynchronously with enhanced error context.
 ///
 /// This function queries the filesystem for metadata (size, permissions, modification time, etc.)
-/// associated with the provided file handle. Errors are enriched with the original file path
-/// to aid debugging.
+/// associated with the provided file handle.
 ///
 /// # Arguments
 ///
 /// * `file` - A reference to an opened `File` handle
-/// * `file_path` - The original path used to open the file (for error reporting)
 ///
 /// # Returns
 ///
 /// * `Ok(Metadata)` - File metadata including size, permissions, and timestamps
-/// * `Err(Exn<IoError<PathBuf>>)` - An enriched error with path context if metadata retrieval fails
+/// * `Err(Exn<IoError<PathBuf>>)` - An enriched error if metadata retrieval fails
 ///
 /// # Errors
 ///
@@ -89,13 +87,11 @@ pub async fn get_file<P: AsRef<Path>>(file_path: &P) -> Result<File, Exn<IoError
 /// #[compio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     let path = Path::new("tamashii.db");
-///     let file = get_file(path).await?;
+///     let file = get_file(&path).await?;
 ///     
 ///     // Get metadata to check file size
-///     let metadata = get_meta(&file, path).await?;
+///     let metadata = get_meta(&file).await?;
 ///     println!("File size: {} bytes", metadata.len());
-///     println!("Is read-only: {}", metadata.permissions().readonly());
-///     println!("Modified: {:?}", metadata.modified()?);
 ///     
 ///     Ok(())
 /// }
@@ -108,7 +104,7 @@ pub async fn get_file<P: AsRef<Path>>(file_path: &P) -> Result<File, Exn<IoError
 ///     ↓
 ///   File handle
 ///     ↓
-/// get_meta(&file, path)
+/// get_meta(&file)
 ///     ↓
 ///   Metadata { size, permissions, modified_time, ... }
 /// ```

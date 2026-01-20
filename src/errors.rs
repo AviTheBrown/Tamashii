@@ -106,6 +106,7 @@ impl fmt::Display for FileError {
 }
 
 /// Enumeration of errors that can occur during file verification.
+#[derive(Debug)]
 pub enum VerificationError {
     /// The file's current hash does not match the stored hash
     HashMissMatched {
