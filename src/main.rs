@@ -1,3 +1,4 @@
+mod commands;
 mod database;
 mod errors;
 mod files;

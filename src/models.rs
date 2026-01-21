@@ -45,7 +45,6 @@ pub struct FileRecord {
     pub hash: HexStirng,
     /// Size of the file in bytes (up to 255 bytes for this specific implementation)
     pub size: u8,
-    #[serde(with = "chrono::serde::ts_seconds")]
     /// Time when the file was indexed
     pub time_stamp: DateTime<Utc>,
 }
@@ -181,11 +180,9 @@ pub struct Database {
     pub version: String,
     /// Root directory of the tracked files
     pub root_dir: PathBuf,
-    #[serde(with = "chrono::serde::ts_seconds")]
     /// Database creation timestamp
     pub created_at: DateTime<Utc>,
     /// Database last update timestamp
-    #[serde(with = "chrono::serde::ts_seconds")]
     pub updated_at: DateTime<Utc>,
     /// List of tracked file records
     pub files: Vec<FileRecord>,

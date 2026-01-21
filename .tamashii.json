@@ -1,7 +1,29 @@
 {
   "version": "1.0.0",
   "root_dir": "/Users/avibrown/Desktop/Rust/tamashii",
-  "created_at": 1768941793,
-  "updated_at": 1768941793,
-  "files": []
+  "created_at": "2026-01-20T21:00:39.484122Z",
+  "updated_at": "2026-01-20T21:01:06.513981Z",
+  "files": [
+    {
+      "id": "76018c36e3feac131a1ffa362c6950e9",
+      "path": "src/main.rs",
+      "hash": "fd4ad05c94ba8d35434c39b3db08cbcd2f3a179520abe38785ac822d5b567c47",
+      "size": 25,
+      "time_stamp": "2026-01-18T23:20:28.576543501Z"
+    },
+    {
+      "id": "980e0cafb2a3c8c30410fd10b45f478b",
+      "path": "src/models.rs",
+      "hash": "8f32bd2d1ae6f7e398ea2f84446c70f5c9e8d3e970d2df9449178f8fd6010810",
+      "size": 28,
+      "time_stamp": "2026-01-20T20:58:22.114577608Z"
+    },
+    {
+      "id": "cce063a136ebdb07c62e7475cfc01138",
+      "path": "src/errors.rs",
+      "hash": "f176be85f396c486ad813445970a34c0f94ddd33534e49235888b925c0684530",
+      "size": 198,
+      "time_stamp": "2026-01-18T05:46:27.870805680Z"
+    }
+  ]
 }
