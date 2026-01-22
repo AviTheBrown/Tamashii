@@ -4,13 +4,13 @@ use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
-struct Cli {
+pub struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    pub command: Commands,
 }
 #[derive(Debug, Subcommand)]
 #[clap(author, version, about)]
-enum Commands {
+pub enum Commands {
     Init,
     Add {
         path: PathBuf,
