@@ -36,7 +36,42 @@ pub async fn main() -> Result<(), Exn<InitError>> {
             println!("Running init...")
         }
         Commands::Add { path } => {
-            println!("Adding path: {:?}", path)
+            println!("Adding path: {:?}", path);
+            // get file
+            let file = files::get_file(&path).await.map_err(|err| InitError {
+                message: format!("\nthere was an error trying to retrieve the file\n{}", err),
+            })?;
+            // retrieve metadata of file
+            let meta = files::get_meta(&file).await.map_err(|err| InitError {
+                message: format!("Failed to retrieve metadata: {}", err),
+            })?;
+            // hash the contents of the file
+            let hashed_file_content = hash::hash_file(&file).await.map_err(|err| {
+                Exn::new(InitError {
+                    message: format!("Failed to hash {:?}'s contents: {}", path, err),
+                })
+            })?;
+            let mut test_db = Database::get_or_create_db(DB_PATH).await?;
+            test_db
+                .builder()
+                .with_fields(
+                    path,
+                    hashed_file_content,
+                    meta.len() as u8,
+                    meta.created().expect("Failed to get creation time").into(),
+                )
+                .commit()
+                .map_err(|err| {
+                    Exn::new(InitError {
+                        message: format!("Failed to commit database changes: {}", err),
+                    })
+                })?;
+            test_db.save().await.map_err(|err| {
+                Exn::new(InitError {
+                    message: format!("Failed to save database: {}", err),
+                })
+            })?;
+            println!("File added!")
         }
         Commands::Verify { path, all } => {
             println!("Verifying: {:?}", path)
@@ -47,42 +82,6 @@ pub async fn main() -> Result<(), Exn<InitError>> {
     }
     Ok(())
 
-    //     // get file
-    //     let file = files::get_file(&file_path).await.map_err(|err| InitError {
-    //         message: format!("There was an error trying to use the file: {}", err),
-    //     })?;
-    //     // retrieve metadata of file
-    //     let meta = files::get_meta(&file).await.map_err(|err| InitError {
-    //         message: format!("Failed to retriece metadata: {}", err),
-    //     })?;
-    //     // hash the contents of the file
-    //     let hashed_file_content = hash::hash_file(&file).await.map_err(|err| {
-    //         Exn::new(InitError {
-    //             message: format!("Failed to hash {:?}'s contents: {}", file_path, err),
-    //         })
-    //     })?;
-
-    //     let mut test_db = Database::get_or_create_db(DB_PATH).await?;
-    //     test_db
-    //         .builder()
-    //         .with_fields(
-    //             file_path.to_path_buf(),
-    //             hashed_file_content,
-    //             meta.len() as u8,
-    //             meta.created().expect("Failed to get creation time").into(),
-    //         )
-    //         .commit()
-    //         .map_err(|err| {
-    //             Exn::new(InitError {
-    //                 message: format!("Failed to commit database changes: {}", err),
-    //             })
-    //         })?;
-
-    //     test_db.save().await.map_err(|err| {
-    //         Exn::new(InitError {
-    //             message: format!("Failed to save database: {}", err),
-    //         })
-    //     })?;
     //     Ok(())
     // }
     // #[cfg(test)]
