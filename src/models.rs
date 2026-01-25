@@ -189,6 +189,33 @@ pub struct Database {
 }
 
 impl Database {
+    pub async fn db_status(&self) {
+        use colored::Colorize;
+        if self.files.is_empty() {
+            let no_file =
+                "No files tracked yet. Use 'tamashii add <file>' to start tracking.".red();
+            println!("{}", no_file);
+        } else {
+            let db_stats = "======= Database Status =======\n".green();
+            let status_display = format!(
+                "Total files: {}\nCreated: {}\nLast updated: {}",
+                self.files.len(),
+                self.created_at,
+                self.updated_at
+            );
+            println!("{}", db_stats);
+            println!("{}", status_display);
+
+            let files = self.files.iter();
+            for file in files {
+                let str_hash = file.hash.to_string();
+                let part = &str_hash[0..8];
+                println!("File: {} Hash: ({}...)", file.path.display(), part)
+            }
+            let db_stats1 = "\n======= Database Status =======".green();
+            println!("{}", db_stats1);
+        }
+    }
     /// Returns an existing database from the specified path or creates a new one if it doesn't exist.
     ///
     /// # Arguments
