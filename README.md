@@ -4,8 +4,6 @@
   <img src="assets/mascot.png" width="250" alt="Tamashii Mascot">
   <br>
   <br>
-  <a href="https://github.com/AviTheBrown/Tamashii/actions"><img src="https://img.shields.io/github/actions/workflow/status/AviTheBrown/Tamashii/rust.yml?branch=main&label=build" alt="Build Status"></a>
-  <a href="https://github.com/AviTheBrown/Tamashii/releases"><img src="https://img.shields.io/github/v/release/AviTheBrown/Tamashii" alt="Version"></a>
   <a href="https://github.com/AviTheBrown/Tamashii/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AviTheBrown/Tamashii" alt="License"></a>
   <img src="https://img.shields.io/badge/rust-2024-orange" alt="Rust Version">
 </div>
