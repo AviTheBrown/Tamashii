@@ -41,7 +41,25 @@ pub async fn run() -> Result<(), Exn<InitError>> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Init => {
-            println!("Running init...")
+            let db = Database::get_or_create_db(DB_PATH)
+                .await
+                .or_raise(|| InitError {
+                    message: "There was an error trying to create or load the database".into(),
+                })?;
+            // welcome message
+            println!("{}", "✨ Tamashii initialized! ✨ ".green().bold());
+            println!("\n{}", "File integrity checker ready.".bright_cyan().bold());
+
+            // usage examples
+            println!("\n{}", "Getting started:".cyan().bold());
+            println!("  tamashii add <file>     - Track a file");
+            println!("  tamashii status         - View tracked files");
+            println!("  tamashii verify <file>  - Check if file changed");
+            println!("  tamashii verify --all   - Check all tracked files");
+
+            // database info
+            println!("\n{} {}", "Database:".cyan().bold(), DB_PATH);
+            println!("{} file(s) currently tracked", db.files.len());
         }
         Commands::Add { path } => {
             let green_add = format!("Adding path {}", path.display()).bold().green();
@@ -133,8 +151,52 @@ pub async fn run() -> Result<(), Exn<InitError>> {
                 }
             }
             (None, true) => {
-                // Verify all - we'll do this after single file works
-                println!("Verify all - not implemented yet");
+                let db = Database::load(&PathBuf::from(DB_PATH))
+                    .await
+                    .or_raise(|| InitError {
+                        message: format!(" Database failed to load"),
+                    })?;
+                let file_len = format!("==== Total of {} files tracked. ====", db.files.len())
+                    .bold()
+                    .bright_green();
+                println!("{}", file_len);
+                // iter throuh files
+                for file in db.files.iter() {
+                    // open each file
+                    let f = files::get_file(&file.path).await.or_raise(|| InitError {
+                        message: format!(
+                            "There was a problem trying to retrieve: {}",
+                            file.path.display()
+                        )
+                        .into(),
+                    })?;
+                    // hash file
+                    let current_hash = hash::hash_file(&f).await.or_raise(|| InitError {
+                        message: "There was an error hashing the file".into(),
+                    })?;
+                    if current_hash == file.hash {
+                        let good = format!("--- GOOD ---").bold();
+                        let good_msg = format!("Hashes match,").green();
+                        let no_change = format!("the files have not changed");
+                        println!("{}", good);
+                        println!("{} {}", good_msg, no_change);
+                        println!("File: {}", file.path.display());
+                        println!("Tracked on:\n\t {}", file.time_stamp);
+                    } else {
+                        let warning = format!("--- WARNING ---").bold();
+                        let warning_msg = format!("Hash mismatch the files have changed.").red();
+                        println!("{}", warning);
+                        println!("{}", warning_msg);
+                        println!("File: {}", file.path.display());
+                        println!(
+                            "From ({}...) -> To ({}..)\n Updated on:\n\t {}",
+                            &current_hash.0[0..8],
+                            &file.hash.0[0..8],
+                            file.time_stamp,
+                        );
+                    }
+                    //TODO add summary
+                }
             }
             (None, false) => {
                 eprintln!("Error: must provide either <path> or --all");
@@ -154,102 +216,4 @@ pub async fn run() -> Result<(), Exn<InitError>> {
     Ok(())
 }
 #[cfg(test)]
-mod test {
-    use exn::ResultExt;
-    use tempfile::NamedTempFile;
-
-    use super::*;
-    use crate::{hash::hash_bytes, models::VERSION};
-    use std::path::PathBuf;
-
-    /// Tests basic database creation and working directory initialization.
-    #[compio::test]
-    async fn create_db() -> Result<(), Exn<InitError>> {
-        let mut temp_db_path = tempfile::NamedTempFile::new().or_raise(|| InitError {
-            message: "Failed trying to create a new DB instance".into(),
-        })?;
-        let content = std::fs::read(DB_PATH).or_raise(|| InitError {
-            message: "Failed trying to create a new DB instance".into(),
-        })?;
-        std::io::Write::write_all(&mut temp_db_path, &content).or_raise(|| InitError {
-            message: "Failed trying to create a new DB instance".into(),
-        })?;
-
-        let db = Database::new()?;
-        println!("The db: {:?}", db);
-        Ok(())
-    }
-    /// Tests file opening logic with non-existent paths.
-    #[compio::test]
-    async fn create_file() -> Result<(), Exn<errors::IoError<PathBuf>>> {
-        let tmp = tempfile::tempdir().map_err(|err| errors::IoError {
-            path: None,
-            message: format!("{}", err),
-        })?;
-        let path = tmp.path().join("test.rs");
-        let _ = files::get_file(&path).await;
-        Ok(())
-    }
-    /// Verifies that hashing the same input twice produces consistent results.
-    #[compio::test]
-    async fn hash_known_input() {
-        let input = b"random-input-input";
-        let h1 = hash_bytes(input);
-        let h2 = hash_bytes(input);
-        assert_eq!(h1, h2)
-    }
-    /// Tests database building from scratch.
-    #[compio::test]
-    async fn build_db() -> Result<(), Exn<InitError>> {
-        let test_db = Database::new().or_raise(|| InitError {
-            message: "Failed trying to create a new DB instance".into(),
-        })?;
-        let current_dir = std::env::current_dir().map_err(|err| {
-            Exn::new(InitError {
-                message: format!("Failed to get current directory: {}", err),
-            })
-        })?;
-        assert_eq!(test_db.version, VERSION);
-        assert_eq!(test_db.root_dir, PathBuf::from(current_dir));
-        Ok(())
-    }
-    /// Verifies that a database instance can be saved to disk.
-    #[compio::test]
-    async fn save_db() -> Result<(), Exn<InitError>> {
-        let test_db = Database::new().or_raise(|| InitError {
-            message: "Failed trying to create a new DB instance".into(),
-        })?;
-        let _ = test_db.save().await.or_raise(|| InitError {
-            message: "Failed to save DB".into(),
-        });
-        Ok(())
-    }
-    /// Tests loading a database from a temporary file.
-    #[compio::test]
-    async fn load_db() -> Result<(), Exn<InitError>> {
-        let mut test_tamashii = NamedTempFile::new().or_raise(|| InitError {
-            message: "Failed trying to create a new DB instance".into(),
-        })?;
-        let contents = std::fs::read(DB_PATH).or_raise(|| InitError {
-            message: "Failed trying to create a new DB instance".into(),
-        })?;
-        std::io::Write::write_all(&mut test_tamashii, &contents).or_raise(|| InitError {
-            message: "Failed trying to create a new DB instance".into(),
-        })?;
-        let db = Database::get_or_create_db(
-            test_tamashii
-                .path()
-                .to_str()
-                .expect("Path is not valid UTF-8"),
-        )
-        .await
-        .or_raise(|| InitError {
-            message: "Failed trying to create a new DB instance".into(),
-        })?;
-        println!("DB files count: {}", db.files.len());
-        println!("DB created_at: {}", db.created_at);
-        assert!(db.files.is_empty());
-        // let _ = test_tamashii.flush();
-        Ok(())
-    }
-}
+mod test;
