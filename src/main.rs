@@ -94,9 +94,11 @@ pub async fn run() -> Result<(), Exn<InitError>> {
         Commands::Verify { path, all } => match (path, all) {
             (Some(p), false) => {
                 // load db
-                let db = Database::load(&p).await.or_raise(|| InitError {
-                    message: format!(" database failed to load"),
-                })?;
+                let db = Database::load(&PathBuf::from(DB_PATH))
+                    .await
+                    .or_raise(|| InitError {
+                        message: format!(" Database failed to load"),
+                    })?;
                 // open file
                 let file = files::get_file(&p).await.or_raise(|| InitError {
                     message: "There was a problem retrieveing the file.".into(),
@@ -112,7 +114,17 @@ pub async fn run() -> Result<(), Exn<InitError>> {
                         if current_hash == record.hash {
                             println!("Hashes match! The file has not changed.")
                         } else {
-                            println!("Hash mismatch the files have changed.")
+                            let warning = format!("--- WARNING ---").bold();
+                            let warning_msg =
+                                format!("Hash mismatch the files have changed.").red();
+                            println!("{}", warning);
+                            println!("{}", warning_msg);
+                            println!(
+                                "From ({}...) -> To ({}..)\n Updated on:\n\t {}",
+                                &current_hash.0[0..8],
+                                &record.hash.0[0..8],
+                                record.time_stamp,
+                            );
                         }
                     }
                     None => {
@@ -120,7 +132,18 @@ pub async fn run() -> Result<(), Exn<InitError>> {
                     }
                 }
             }
-            None => {}
+            (None, true) => {
+                // Verify all - we'll do this after single file works
+                println!("Verify all - not implemented yet");
+            }
+            (None, false) => {
+                eprintln!("Error: must provide either <path> or --all");
+                std::process::exit(1);
+            }
+            (Some(_), true) => {
+                eprintln!("Error: cannot use both <path> and --all");
+                std::process::exit(1);
+            }
         },
         Commands::Status => {
             println!("Getting the status...");
