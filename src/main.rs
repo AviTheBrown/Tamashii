@@ -1,17 +1,16 @@
 mod commands;
 use crate::commands::{Cli, Commands};
-use ::colored::ColoredString;
 mod database;
 mod errors;
 mod files;
 mod hash;
 mod macros;
 mod models;
-use clap::{Command, Parser};
+use clap::Parser;
 use colored::Colorize;
 use exn::{Exn, ResultExt};
 use models::Database;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::{database::DB_PATH, errors::InitError};
 
@@ -37,6 +36,9 @@ pub async fn main() {
         std::process::exit(1);
     }
 }
+/// Main application logic that handles subcommand routing and execution.
+///
+/// This function is separated from `main` to facilitate error handling with `Result`.
 pub async fn run() -> Result<(), Exn<InitError>> {
     let cli = Cli::parse();
     match cli.command {
