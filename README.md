@@ -1,7 +1,7 @@
 # Tamashii (魂)
 
 <div align="center">
-  <img src="assets/mascot.png" width="300" alt="Tamashii Mascot">
+  <img src="assets/mascot.png" width="250" alt="Tamashii Mascot">
   <br>
   <br>
   <a href="https://github.com/AviTheBrown/Tamashii/actions"><img src="https://img.shields.io/github/actions/workflow/status/AviTheBrown/Tamashii/rust.yml?branch=main&label=build" alt="Build Status"></a>
