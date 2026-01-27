@@ -91,9 +91,37 @@ pub async fn run() -> Result<(), Exn<InitError>> {
             })?;
             println!("File added!")
         }
-        Commands::Verify { path, all } => {
-            println!("Verifying: {:?}", path)
-        }
+        Commands::Verify { path, all } => match (path, all) {
+            (Some(p), false) => {
+                // load db
+                let db = Database::load(&p).await.or_raise(|| InitError {
+                    message: format!(" database failed to load"),
+                })?;
+                // open file
+                let file = files::get_file(&p).await.or_raise(|| InitError {
+                    message: "There was a problem retrieveing the file.".into(),
+                })?;
+                // hash file
+                let current_hash = hash::hash_file(&file).await.or_raise(|| InitError {
+                    message: "There was an error hashing the file".into(),
+                })?;
+                // find file in db if there
+                let stored_recored = db.files.iter().find(|file| file.path == p);
+                match stored_recored {
+                    Some(record) => {
+                        if current_hash == record.hash {
+                            println!("Hashes match! The file has not changed.")
+                        } else {
+                            println!("Hash mismatch the files have changed.")
+                        }
+                    }
+                    None => {
+                        println!("There was no matching file in the database.")
+                    }
+                }
+            }
+            None => {}
+        },
         Commands::Status => {
             println!("Getting the status...");
             let db = Database::load(&PathBuf::from(&DB_PATH)).await?;
